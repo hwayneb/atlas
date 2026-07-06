@@ -1,0 +1,9 @@
+{
+  "name": "Hybrid D&D Solo Engine",
+  "short_name": "Hybrid D&D",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#f6f2e8",
+  "theme_color": "#253047",
+  "icons": []
+}

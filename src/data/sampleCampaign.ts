@@ -1,0 +1,119 @@
+import type { CampaignPackage } from "../types/index.ts";
+
+export const sampleCampaign: CampaignPackage = {
+  id: "ember-road",
+  title: "The Ember Road",
+  version: "0.1.0",
+  startingSceneId: "scene-crossroads",
+  characters: [
+    {
+      id: "hero-lyra",
+      name: "Lyra Vale",
+      ancestry: "Human",
+      className: "Ranger",
+      level: 3,
+      armorClass: 15,
+      hitPoints: { current: 24, max: 28 },
+      abilities: {
+        strength: 10,
+        dexterity: 16,
+        constitution: 14,
+        intelligence: 12,
+        wisdom: 15,
+        charisma: 11
+      },
+      inventory: ["longbow", "shortsword", "traveler's pack", "emberglass compass"],
+      notes: "Searching for the source of ash storms along the old trade road."
+    }
+  ],
+  npcs: [
+    {
+      id: "npc-mara",
+      name: "Mara Flint",
+      role: "Caravan scout",
+      locationId: "loc-crossroads",
+      disposition: "wary",
+      description: "A soot-streaked scout who knows every broken milestone on the Ember Road."
+    }
+  ],
+  locations: [
+    {
+      id: "loc-crossroads",
+      name: "Ashen Crossroads",
+      description: "Four roads meet beneath leaning waystones dusted with warm gray ash.",
+      sceneIds: ["scene-crossroads"]
+    },
+    {
+      id: "loc-watchtower",
+      name: "Fallow Watchtower",
+      description: "A ruined signal tower overlooking the blackened valley.",
+      sceneIds: ["scene-watchtower"]
+    }
+  ],
+  encounters: [
+    {
+      id: "enc-ash-wolves",
+      name: "Ash Wolves",
+      locationId: "loc-crossroads",
+      difficulty: "medium",
+      description: "Three hungry wolves with ember-bright eyes stalk the roadside.",
+      creatures: ["ash wolf", "ash wolf", "ash wolf"],
+      reward: "A charred courier satchel with a sealed map."
+    }
+  ],
+  quests: [
+    {
+      id: "quest-ember-road",
+      title: "Find the Source of the Ash Storms",
+      status: "active",
+      description: "Track the strange ash falls to whatever is burning beneath the valley.",
+      objectives: [
+        { id: "obj-scout", text: "Question Mara Flint at the crossroads.", complete: false },
+        { id: "obj-tower", text: "Reach the Fallow Watchtower.", complete: false }
+      ]
+    }
+  ],
+  scenes: [
+    {
+      id: "scene-crossroads",
+      locationId: "loc-crossroads",
+      title: "Warm Ash on the Wind",
+      text: "The road ahead vanishes into a low curtain of ash. Mara Flint waits beside a cracked milestone, one hand resting on the hilt of her knife.",
+      actions: [
+        {
+          id: "act-speak-mara",
+          label: "Speak with Mara",
+          resultText: "Mara points toward the Fallow Watchtower and warns that the ash wolves hunt before dusk.",
+          nextSceneId: "scene-watchtower",
+          journalEntry: "Mara says the ash grows warmer near the Fallow Watchtower."
+        },
+        {
+          id: "act-search-road",
+          label: "Search the road",
+          resultText: "You find fresh pawprints burned into the dust.",
+          journalEntry: "Ash wolf tracks cross the road. They are fresh."
+        }
+      ]
+    },
+    {
+      id: "scene-watchtower",
+      locationId: "loc-watchtower",
+      title: "The Fallow Watchtower",
+      text: "The tower rises from the ridge like a broken tooth. Beneath it, something glows through cracks in the stone.",
+      actions: [
+        {
+          id: "act-enter-tower",
+          label: "Enter the tower",
+          resultText: "A hot draft rolls down the stairs, carrying the smell of iron and old smoke.",
+          journalEntry: "The tower hides a heat source below its foundation."
+        },
+        {
+          id: "act-make-camp",
+          label: "Make a cautious camp",
+          resultText: "You mark a sheltered hollow and settle in for a tense watch.",
+          journalEntry: "Made camp near the Fallow Watchtower."
+        }
+      ]
+    }
+  ]
+};
