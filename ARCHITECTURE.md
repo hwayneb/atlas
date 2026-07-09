@@ -1,4 +1,4 @@
-# Architecture Vision
+# Atlas Architecture
 
 ## Project Vision
 
@@ -11,10 +11,11 @@ Cloud AI is an enhancement, not a dependency.
 1. Offline first
 2. Local ownership of game state
 3. Deterministic game engine
-4. AI enhancement layer
-5. Campaign portability
-6. Save anywhere
-7. Moddable campaigns
+4. Event-sourced campaign history
+5. AI enhancement layer
+6. Campaign portability
+7. Save anywhere
+8. Moddable campaigns
 
 ## Boundaries
 
@@ -23,6 +24,8 @@ Cloud AI is an enhancement, not a dependency.
 - Save files must be owned by the player and restorable without an account.
 - The event log is the only authoritative campaign history.
 - `GameState`, Journal, NPC Memory, Quest State, Relationship State, and World State are projections that may be rebuilt at any time from the event history.
+- Commands express intent and are never persisted.
+- Events express facts and are authoritative after append.
 - Optional AI features must sit behind adapters and degrade cleanly to local deterministic play.
 - UI code may present game state, but durable rules and campaign transitions belong in engine modules.
 
@@ -30,8 +33,9 @@ Cloud AI is an enhancement, not a dependency.
 
 | Module | Responsibility |
 | --- | --- |
-| Engine | Coordinates deterministic state transitions. |
+| Campaign Runtime | Coordinates command processing, event append, replay, projections, snapshots, and saves. |
 | Story Engine | Advances scenes, choices, clocks, and narrative consequences. |
+| World Engine | Tracks world clock, travel, weather, locations, factions, schedules, rumors, and delayed consequences. |
 | Combat Engine | Runs initiative, turns, conditions, damage, and encounter outcomes. |
 | NPC Memory | Stores local facts, impressions, and events known by NPCs. |
 | Relationship Engine | Tracks affinity, trust, fear, reputation, and faction standing. |
@@ -42,17 +46,25 @@ Cloud AI is an enhancement, not a dependency.
 | Asset Manager | Resolves local images, maps, handouts, audio, and other campaign assets. |
 | AI Adapter | Optional enhancement boundary for local or cloud-assisted narration. |
 
-## MVP-001 Placement
+## Runtime Foundation
 
-MVP-001 implements the first local slice:
+The Campaign Runtime follows this flow:
 
-- Campaign package types
-- Character, NPC, location, encounter, quest, scene, and state types
-- Deterministic scene action application
-- Dice rolling
-- Journal updates
-- Local save and restore through browser storage
-- Sample campaign package
-- Static PWA shell
+```text
+Player Input
+-> Command
+-> Validation
+-> Rule Execution
+-> Event(s)
+-> Event Store
+-> Projection Manager
+-> Updated Projections
+-> UI
+```
 
-The AI adapter is intentionally absent from MVP-001. When added later, it should consume local game context and return suggestions, never become required for saves, rules, or campaign progression.
+Canonical runtime API contracts live in `docs/contracts/runtime-api.md`.
+
+## TODO
+
+- Decide when to promote Replay Engine, Projection Manager, Snapshot Manager, and Save Manager interfaces from Draft to Stable.
+- Define the first domain plugin that exercises the runtime foundation in a playable loop.

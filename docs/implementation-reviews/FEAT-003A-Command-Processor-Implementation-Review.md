@@ -160,6 +160,6 @@ Result: no matches in `src` or `tests`.
 
 Approve FEAT-003A.
 
-The implementation satisfies the Command Processor design review and preserves the approved architecture from README, `docs/ARCHITECTURE.md`, ADR-001, ADR-002, ADR-003, and the FEAT-003 Campaign Runtime design.
+The implementation satisfies the Command Processor design review and preserves the approved architecture from README, `ARCHITECTURE.md`, ADR-001, ADR-002, ADR-003, and the FEAT-003 Campaign Runtime design.
 
 Recommended follow-ups are non-blocking and can be handled in later runtime hardening work.

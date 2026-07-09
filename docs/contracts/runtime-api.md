@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-This document is the canonical runtime API contract for the Hybrid D&D Solo Engine Campaign Runtime.
+This document is the canonical runtime API contract for the Atlas Campaign Runtime.
 
 Future design reviews and implementations should reference this document as the single source of truth for public Campaign Runtime interfaces.
 

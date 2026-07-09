@@ -2,7 +2,7 @@
 
 ## 1. Feature Understanding
 
-The Campaign Runtime is the execution layer for the Hybrid D&D Solo Engine. It processes player intent, validates commands, executes deterministic rules, records authoritative events, rebuilds projections, manages snapshots, saves local campaign state, and restores campaigns.
+The Campaign Runtime is the execution layer for Atlas. It processes player intent, validates commands, executes deterministic rules, records authoritative events, rebuilds projections, manages snapshots, saves local campaign state, and restores campaigns.
 
 The runtime is the integration boundary for all future subsystems, including Story Engine, Combat Engine, Quest Engine, NPC Memory, Relationship Engine, Inventory, Journal, World Engine, and AI Adapter.
 

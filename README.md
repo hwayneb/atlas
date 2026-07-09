@@ -1,6 +1,6 @@
-# Hybrid D&D Solo Engine MVP
+# Atlas
 
-Offline-first solo D&D campaign engine designed for local iPad/PWA play.
+Atlas is an offline-first solo D&D campaign engine designed for local iPad/PWA play.
 
 Cloud AI is an enhancement, not a dependency.
 
@@ -15,7 +15,13 @@ Cloud AI is an enhancement, not a dependency.
 
 ## Architecture
 
-The long-term module map and project principles live in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Start here:
+
+- [Project Blueprint](PROJECT-BLUEPRINT.md)
+- [Architecture](ARCHITECTURE.md)
+- [Roadmap](ROADMAP.md)
+- [Feature Status](FEATURE-STATUS.md)
+- [Decision Log](DECISION-LOG.md)
 
 Architecture decisions are tracked in `docs/adr/`:
 
