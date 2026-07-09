@@ -1,9 +1,9 @@
 {
-  "name": "hybrid-dnd-solo-engine",
+  "name": "atlas",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Offline-first solo D&D campaign engine MVP for local-first web/PWA play.",
+  "description": "Offline-first solo D&D campaign engine for local-first iPad/PWA play.",
   "scripts": {
     "test": "node --test --experimental-strip-types tests/*.test.ts",
     "typecheck": "tsc --noEmit",

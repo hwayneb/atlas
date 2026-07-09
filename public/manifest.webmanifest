@@ -1,6 +1,6 @@
 {
-  "name": "Hybrid D&D Solo Engine",
-  "short_name": "Hybrid D&D",
+  "name": "Atlas",
+  "short_name": "Atlas",
   "start_url": "/index.html",
   "display": "standalone",
   "background_color": "#f6f2e8",

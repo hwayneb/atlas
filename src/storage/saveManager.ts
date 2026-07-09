@@ -6,7 +6,7 @@ export class SaveManager {
   private readonly storageKey: string;
   private readonly storage: KeyValueStorage;
 
-  constructor(storage: KeyValueStorage = window.localStorage, storageKey = "hybrid-dnd.game-state") {
+  constructor(storage: KeyValueStorage = window.localStorage, storageKey = "atlas.game-state") {
     this.storage = storage;
     this.storageKey = storageKey;
   }

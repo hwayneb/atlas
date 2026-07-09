@@ -1,5 +1,5 @@
 const app = document.querySelector("#app");
-const storageKey = "hybrid-dnd.game-state";
+const storageKey = "atlas.game-state";
 const campaign = {
   id: "ember-road",
   title: "The Ember Road",

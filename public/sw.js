@@ -1,4 +1,4 @@
-const CACHE_NAME = "hybrid-dnd-mvp-001";
+const CACHE_NAME = "atlas-mvp-001";
 const ASSETS = [
   "/",
   "/index.html",
