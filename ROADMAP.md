@@ -10,10 +10,10 @@ Build the Campaign Runtime foundation in small, reviewable slices.
 - FEAT-003A: Command Processor
 - FEAT-003B: Append-only Event Store
 - FEAT-003C: Replay Engine first slice
+- FEAT-004: Projection Manager first slice
 
 ## Near-Term Candidates
 
-- Projection Manager, required for replayed projection rebuilds
 - Snapshot Manager, after full replay behavior is stable
 - Save Manager and portable save packages, after replay/restore behavior is stable
 - First runtime-backed playable scene flow

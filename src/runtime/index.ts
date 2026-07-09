@@ -2,6 +2,7 @@ export { CommandProcessor } from "./commandProcessor.ts";
 export type { CommandProcessorOptions } from "./commandProcessor.ts";
 export { DefaultEventSchemaRegistry, DefaultEventStore, InMemoryEventStorageAdapter } from "./eventStore.ts";
 export { DefaultPluginRegistry } from "./pluginRegistry.ts";
+export { DefaultProjectionManager, ProjectionManagerError } from "./projectionManager.ts";
 export { DefaultReplayEngine } from "./replayEngine.ts";
 export { DefaultRuleEngine } from "./ruleEngine.ts";
 export { DefaultValidationPipeline } from "./validationPipeline.ts";
@@ -23,6 +24,9 @@ export type {
   EventStorageAdapter,
   PluginInitContext,
   PluginRegistry,
+  ProjectionApplyResult,
+  ProjectionDefinition,
+  ProjectionEventHandler,
   ProjectionManager,
   ProjectionReducer,
   ProjectionSet,

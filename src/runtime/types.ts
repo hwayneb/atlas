@@ -98,6 +98,23 @@ export type EventMetadataSchema = {
 
 export type ProjectionSet = Record<string, unknown>;
 
+export type ProjectionDefinition<TState = unknown> = {
+  name: string;
+  initialState: TState | (() => TState);
+  apply: ProjectionEventHandler<TState>;
+};
+
+export type ProjectionEventHandler<TState = unknown> = (
+  event: CampaignEvent,
+  state: Readonly<TState>
+) => TState | void;
+
+export type ProjectionApplyResult = {
+  ok: boolean;
+  latestSequence: number;
+  diagnostics: RuntimeDiagnostic[];
+};
+
 export type RuntimeServices = {
   now?: () => string;
   createId?: () => string;
@@ -177,7 +194,13 @@ export interface EventStore {
 }
 
 export interface ProjectionManager {
+  register<TState>(definition: ProjectionDefinition<TState>): void;
+  reset(): void | Promise<void>;
   apply(event: CampaignEvent): void | Promise<void>;
+  rebuild(events: CampaignEvent[]): ProjectionSet | Promise<ProjectionSet>;
+  get<TState = unknown>(name: string): Readonly<TState> | undefined;
+  has(name: string): boolean;
+  getCurrent(): ProjectionSet;
 }
 
 export type EventIntegrityResult = {

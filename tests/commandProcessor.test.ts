@@ -8,7 +8,9 @@ import {
   type CampaignCommand,
   type CampaignEvent,
   type EventStore,
+  type ProjectionDefinition,
   type ProjectionManager,
+  type ProjectionSet,
   type RuntimeContext,
   type RuntimePlugin
 } from "../src/runtime/index.ts";
@@ -54,8 +56,36 @@ class FakeEventStore implements EventStore {
 class FakeProjectionManager implements ProjectionManager {
   appliedEvents: CampaignEvent[] = [];
 
+  register<TState>(_definition: ProjectionDefinition<TState>): void {
+    return undefined;
+  }
+
+  reset(): void {
+    this.appliedEvents = [];
+  }
+
   apply(event: CampaignEvent): void {
     this.appliedEvents.push(event);
+  }
+
+  rebuild(events: CampaignEvent[]): ProjectionSet {
+    this.reset();
+    for (const event of events) {
+      this.apply(event);
+    }
+    return this.getCurrent();
+  }
+
+  get(): undefined {
+    return undefined;
+  }
+
+  has(): boolean {
+    return false;
+  }
+
+  getCurrent(): ProjectionSet {
+    return {};
   }
 }
 

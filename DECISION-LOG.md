@@ -14,6 +14,7 @@ Major architecture decisions should be recorded here or in `docs/adr/` before im
 | Command Processor | Implemented | `docs/design-reviews/FEAT-003A-Command-Processor-Design-Review.md` |
 | Event Store | Implemented | `docs/design-reviews/FEAT-003B-Event-Store-Design-Review.md` |
 | Replay Engine | Implemented | `docs/design-reviews/FEAT-003C-Replay-Engine-Design-Review.md` |
+| Projection Manager | Implemented | `docs/contracts/runtime-api.md` |
 
 ## TODO
 

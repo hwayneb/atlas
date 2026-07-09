@@ -78,7 +78,7 @@ Stability statuses:
 | EventCandidate | Stable | Caller-submitted event candidate without authoritative id or sequence. |
 | CampaignEvent | Stable | Persisted event with Event Store assigned id and sequence. |
 | ReplayEngine | Draft | Design direction accepted; implementation still pending. |
-| ProjectionManager | Draft | Design direction accepted; implementation still pending. |
+| ProjectionManager | Draft | FEAT-004 first slice implemented; interface may evolve with domain projections and snapshots. |
 | SnapshotManager | Draft | Performance artifact manager; expected to evolve. |
 | SaveManager | Draft | Export/import and active save lifecycle are not fully implemented yet. |
 | RuntimeServices | Draft | Service surface may evolve as ID, clock, integrity, and diagnostics mature. |
@@ -356,15 +356,29 @@ interface ReplayResult {
 
 ```ts
 interface ProjectionManager {
+  register<TState>(definition: ProjectionDefinition<TState>): void;
+  reset(): void | Promise<void>;
   apply(event: CampaignEvent): void | Promise<void>;
-  rebuild(events: CampaignEvent[]): ProjectionSet;
-  restore(snapshot: Snapshot): ProjectionSet;
+  rebuild(events: CampaignEvent[]): ProjectionSet | Promise<ProjectionSet>;
+  get<TState = unknown>(name: string): Readonly<TState> | undefined;
+  has(name: string): boolean;
   getCurrent(): ProjectionSet;
 }
 
 type ProjectionSet = Record<string, unknown>;
 
 type ProjectionReducer = (event: CampaignEvent, projections: ProjectionSet) => ProjectionSet | void;
+
+interface ProjectionDefinition<TState = unknown> {
+  name: string;
+  initialState: TState | (() => TState);
+  apply: ProjectionEventHandler<TState>;
+}
+
+type ProjectionEventHandler<TState = unknown> = (
+  event: CampaignEvent,
+  state: Readonly<TState>
+) => TState | void;
 ```
 
 ## 11. Snapshot Manager Interfaces
