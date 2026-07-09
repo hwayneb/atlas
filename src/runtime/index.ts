@@ -2,6 +2,7 @@ export { CommandProcessor } from "./commandProcessor.ts";
 export type { CommandProcessorOptions } from "./commandProcessor.ts";
 export { DefaultEventSchemaRegistry, DefaultEventStore, InMemoryEventStorageAdapter } from "./eventStore.ts";
 export { DefaultPluginRegistry } from "./pluginRegistry.ts";
+export { DefaultReplayEngine } from "./replayEngine.ts";
 export { DefaultRuleEngine } from "./ruleEngine.ts";
 export { DefaultValidationPipeline } from "./validationPipeline.ts";
 export type {
@@ -25,6 +26,10 @@ export type {
   ProjectionManager,
   ProjectionReducer,
   ProjectionSet,
+  ReplayEngine,
+  ReplayInput,
+  ReplayProjectionManager,
+  ReplayResult,
   RuleEngine,
   RuleExecutionResult,
   RuleHandler,

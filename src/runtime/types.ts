@@ -7,6 +7,9 @@ export type RuntimeDiagnostic = {
   message: string;
   severity: RuntimeDiagnosticSeverity;
   source?: string;
+  sequence?: number;
+  eventId?: string;
+  commandId?: string;
 };
 
 export type CommandMetadata = {
@@ -198,4 +201,31 @@ export interface EventSchemaRegistry {
   getSchema(type: string, schemaVersion: number): EventSchema | undefined;
   getMetadataSchema(metadataVersion: number): EventMetadataSchema | undefined;
   validate(event: EventCandidate | CampaignEvent): RuntimeDiagnostic[];
+}
+
+export interface ReplayEngine {
+  replay(input: ReplayInput): Promise<ReplayResult>;
+}
+
+export type ReplayInput = {
+  campaignPackage: CampaignPackage;
+  events: CampaignEvent[];
+  projectionManager: ReplayProjectionManager;
+  schemaRegistry?: EventSchemaRegistry;
+  snapshot?: unknown;
+};
+
+export type ReplayResult = {
+  ok: boolean;
+  projections?: ProjectionSet;
+  latestSequence: number;
+  diagnostics: RuntimeDiagnostic[];
+  failingSequence?: number;
+  failingEventId?: string;
+};
+
+export interface ReplayProjectionManager {
+  reset(): void | Promise<void>;
+  apply(event: CampaignEvent): void | Promise<void>;
+  getCurrent(): ProjectionSet;
 }
