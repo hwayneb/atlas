@@ -1,5 +1,9 @@
 # Atlas Feature Status
 
+Architecture v1.0 is finalized. The table below tracks implemented runtime slices and the current status of each Architecture v1.0 engine.
+
+## Implemented Runtime Foundation
+
 | Area | Status | Notes |
 | --- | --- | --- |
 | Local-first PWA shell | Implemented | Static browser app with local campaign sample. |
@@ -10,9 +14,25 @@
 | Projection Manager | Implemented | FEAT-004 first slice complete: projection registration, reset, deterministic event application, lookup, rebuild, and failure isolation. |
 | Snapshot Manager | Draft | Contract exists; implementation pending. |
 | Save Manager | Early MVP | Current localStorage save manager predates runtime event sourcing. |
-| Domain engines | Not started | Story, World, Combat, Quest, Inventory, NPC Memory, and Relationship engines are future work. |
-| AI Adapter | Not started | Optional enhancement only; not required for core play. |
+
+## Architecture v1.0 Engine Status
+
+| Engine | Status | Notes |
+| --- | --- | --- |
+| Runtime Engine | In progress | Command Processor, Event Store, Replay Engine, and Projection Manager first slices are implemented. Snapshot Manager, Save Manager reconciliation, asset registry, plugin registry hardening, and migration support remain. |
+| Campaign Director | Next | MVP is the next major milestone. It should own orchestration, scene lifecycle, player intent routing, NPC activation, AI capability requests, campaign memory integration, and event generation without owning rules. |
+| Rules Engine | Foundation only | Early dice and rule abstractions exist. Full plugin-based rules framework, character systems, combat, inventory, conditions, and rules validation remain. |
+| World Engine | Not started | Persistent world state, NPC memory, factions, reputation, time, travel, economy, weather, and living-world simulation remain future work. |
+| Presentation Engine | Shell only | Static PWA shell exists. Maps, tokens, fog of war, audio, animation, portraits, voice, and cinematic presentation remain future work. |
+| Lore Engine | Not started | Automatic journal, encyclopedia, timeline, relationship graph, quest history, and lore summaries remain future work. |
+| Creator Engine | Not started | Campaign builder, rule editor, asset pipeline, AI personality builder, packaging, and marketplace preparation remain future work. |
+
+## Historical Names
+
+Older docs may refer to Story, World, Combat, Quest, Inventory, NPC Memory, Relationship, or AI Adapter engines. Under Architecture v1.0, those capabilities map into the seven-engine model documented in [ARCHITECTURE.md](ARCHITECTURE.md), [docs/ENGINE-CONTRACTS.md](docs/ENGINE-CONTRACTS.md), and [docs/INTERFACE-SPECIFICATION.md](docs/INTERFACE-SPECIFICATION.md).
 
 ## TODO
 
 - Reconcile the early localStorage save manager with the event-sourced runtime Save Manager design.
+- Implement the Campaign Director MVP as the next architecture-validation milestone.
+- Update this status file after each completed feature and implementation review.
