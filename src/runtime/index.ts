@@ -5,6 +5,16 @@ export { DefaultPluginRegistry } from "./pluginRegistry.ts";
 export { DefaultProjectionManager, ProjectionManagerError } from "./projectionManager.ts";
 export { DefaultReplayEngine } from "./replayEngine.ts";
 export { DefaultRuleEngine } from "./ruleEngine.ts";
+export {
+  DefaultSnapshotManager,
+  EventCountSnapshotPolicy,
+  InMemorySnapshotStore,
+  SNAPSHOT_SCHEMA_VERSION,
+  SnapshotManagerError,
+  deserializeSnapshot,
+  serializeSnapshot,
+  validateSnapshot
+} from "./snapshotManager.ts";
 export { DefaultValidationPipeline } from "./validationPipeline.ts";
 export type {
   AppendResult,
@@ -42,6 +52,16 @@ export type {
   RuntimeDiagnosticSeverity,
   RuntimePlugin,
   RuntimeServices,
+  Snapshot,
+  SnapshotCandidate,
+  SnapshotLoadResult,
+  SnapshotManager,
+  SnapshotPolicy,
+  SnapshotPolicyInput,
+  SnapshotReplayInput,
+  SnapshotResult,
+  SnapshotStore,
+  SnapshotValidationContext,
   StartupHook,
   ValidatedCommand,
   ValidationPipeline,

@@ -18,6 +18,8 @@ if (!app) {
   throw new Error("App root was not found.");
 }
 
+const appRoot = app;
+
 if (state.campaignId !== campaign.id) {
   state = createInitialGameState(campaign);
 }
@@ -34,7 +36,7 @@ function render(lastResult = ""): void {
   const scene = getCurrentScene(campaign, state);
   const character = getActiveCharacter(campaign, state);
 
-  app.innerHTML = `
+  appRoot.innerHTML = `
     <section class="topline">
       <div>
         <p class="kicker">Offline Campaign</p>
@@ -104,7 +106,7 @@ function render(lastResult = ""): void {
 }
 
 function bindEvents(): void {
-  for (const button of app.querySelectorAll<HTMLButtonElement>("[data-action]")) {
+  for (const button of appRoot.querySelectorAll<HTMLButtonElement>("[data-action]")) {
     button.addEventListener("click", () => {
       const actionId = button.getAttribute("data-action");
       if (!actionId) {
@@ -118,9 +120,9 @@ function bindEvents(): void {
     });
   }
 
-  app.querySelector<HTMLButtonElement>("[data-command='roll']")?.addEventListener("click", () => {
-    const input = app.querySelector<HTMLInputElement>("#dice-notation");
-    const output = app.querySelector<HTMLElement>("#dice-result");
+  appRoot.querySelector<HTMLButtonElement>("[data-command='roll']")?.addEventListener("click", () => {
+    const input = appRoot.querySelector<HTMLInputElement>("#dice-notation");
+    const output = appRoot.querySelector<HTMLElement>("#dice-result");
     if (!input || !output) {
       return;
     }
@@ -135,15 +137,18 @@ function bindEvents(): void {
     }
   });
 
-  app.querySelector<HTMLButtonElement>("[data-command='reset']")?.addEventListener("click", () => {
+  appRoot.querySelector<HTMLButtonElement>("[data-command='reset']")?.addEventListener("click", () => {
     state = createInitialGameState(campaign);
     saveManager.save(state);
     render();
   });
 
-  app.querySelector<HTMLFormElement>("#journal-form")?.addEventListener("submit", (event) => {
+  appRoot.querySelector<HTMLFormElement>("#journal-form")?.addEventListener("submit", (event) => {
     event.preventDefault();
     const form = event.currentTarget;
+    if (!(form instanceof HTMLFormElement)) {
+      return;
+    }
     const data = new FormData(form);
     const text = String(data.get("entry") ?? "").trim();
     if (!text) {

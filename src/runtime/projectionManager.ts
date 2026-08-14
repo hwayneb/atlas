@@ -7,7 +7,7 @@ import type {
   RuntimeDiagnostic
 } from "./types.ts";
 
-type StoredProjection<TState = unknown> = {
+type StoredProjection<TState = any> = {
   definition: ProjectionDefinition<TState>;
   state: TState;
 };
@@ -60,6 +60,17 @@ export class DefaultProjectionManager implements ProjectionManager {
   reset(): void {
     for (const projection of this.projections.values()) {
       projection.state = createInitialState(projection.definition);
+    }
+    this.latestSequence = 0;
+  }
+
+  restore(projections: ProjectionSet): void {
+    for (const [name, projection] of this.projections) {
+      if (Object.hasOwn(projections, name)) {
+        projection.state = cloneValue(projections[name]);
+      } else {
+        projection.state = createInitialState(projection.definition);
+      }
     }
     this.latestSequence = 0;
   }
@@ -134,7 +145,7 @@ export class DefaultProjectionManager implements ProjectionManager {
   }
 }
 
-function validateDefinition(definition: ProjectionDefinition): void {
+function validateDefinition<TState>(definition: ProjectionDefinition<TState>): void {
   if (!definition.name) {
     throw new ProjectionManagerError(
       "Projection name is required.",
