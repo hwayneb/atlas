@@ -73,7 +73,7 @@ export class DefaultSnapshotManager implements SnapshotManager {
 
   async load(aggregateId: string, context: SnapshotValidationContext): Promise<SnapshotLoadResult> {
     const snapshot = await this.store.load(aggregateId);
-    if (!snapshot) {
+    if (snapshot === null) {
       return { ok: true, found: false, diagnostics: [] };
     }
 
@@ -111,13 +111,18 @@ export class DefaultSnapshotManager implements SnapshotManager {
       const anchorDiagnostics = await validateSnapshotAnchor(input.eventStore, loadResult.snapshot);
       if (!hasErrors(anchorDiagnostics)) {
         const events = await input.eventStore.getAfter(loadResult.snapshot.version);
-        return input.replayEngine.replay({
+        const result = await input.replayEngine.replay({
           campaignPackage: input.campaignPackage,
           events,
           projectionManager: input.projectionManager,
           schemaRegistry: input.schemaRegistry,
           snapshot: loadResult.snapshot
         });
+        if (!result.diagnostics.some((diagnostic) =>
+          diagnostic.code === "replay.snapshot_restore_failed"
+          || diagnostic.code === "replay.snapshot_restore_unsupported")) {
+          return result;
+        }
       }
     }
 
@@ -180,15 +185,18 @@ export class EventCountSnapshotPolicy implements SnapshotPolicy {
 }
 
 export function serializeSnapshot(snapshot: Snapshot): string {
-  return stableStringify(snapshot);
+  return stableStringify(JSON.parse(JSON.stringify(snapshot)));
 }
 
 export function deserializeSnapshot(serialized: string): Snapshot {
   return JSON.parse(serialized) as Snapshot;
 }
 
-export function validateSnapshot(snapshot: Snapshot, context: SnapshotValidationContext): RuntimeDiagnostic[] {
+export function validateSnapshot(snapshot: unknown, context: SnapshotValidationContext): RuntimeDiagnostic[] {
   const diagnostics: RuntimeDiagnostic[] = [];
+  if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) {
+    return [error("snapshot.envelope_invalid", "Snapshot must be an object.")];
+  }
   const record = snapshot as Snapshot & Record<string, unknown>;
 
   if (typeof record.id !== "string" || !record.id) {
@@ -225,7 +233,7 @@ export function validateSnapshot(snapshot: Snapshot, context: SnapshotValidation
     diagnostics.push(error("snapshot.timestamp_invalid", "Snapshot timestamp is required."));
   }
 
-  if (!("state" in record) || record.state === undefined || record.state === null) {
+  if (!record.state || typeof record.state !== "object" || Array.isArray(record.state)) {
     diagnostics.push(error("snapshot.state_invalid", "Snapshot state is required."));
   }
 

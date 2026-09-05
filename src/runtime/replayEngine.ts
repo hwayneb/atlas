@@ -5,6 +5,7 @@ import type {
   ReplayResult,
   RuntimeDiagnostic
 } from "./types.ts";
+import { SNAPSHOT_SCHEMA_VERSION, validateSnapshot } from "./snapshotManager.ts";
 
 export class DefaultReplayEngine implements ReplayEngine {
   async replay(input: ReplayInput): Promise<ReplayResult> {
@@ -89,6 +90,17 @@ export class DefaultReplayEngine implements ReplayEngine {
 }
 
 function validateReplayInput(input: ReplayInput): ReplayResult | null {
+  if (input.snapshot !== undefined) {
+    const diagnostics = validateSnapshot(input.snapshot, {
+      campaignId: input.campaignPackage.id,
+      aggregateId: input.snapshot?.aggregateId,
+      aggregateType: input.snapshot?.aggregateType,
+      schemaVersion: SNAPSHOT_SCHEMA_VERSION
+    });
+    if (diagnostics.length > 0) {
+      return failure(diagnostics[0]);
+    }
+  }
   const seenSequences = new Set<number>();
   const startingSequence = input.snapshot?.version ?? 0;
   let previousSequence = startingSequence;
