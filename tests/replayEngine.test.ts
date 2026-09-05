@@ -14,8 +14,10 @@ class FakeReplayProjectionManager implements ReplayProjectionManager {
   appliedEvents: CampaignEvent[] = [];
   failOnSequence?: number;
   failOnReset = false;
+  failOnRestore = false;
   failOnGetCurrent = false;
   resetCalls = 0;
+  restoreCalls = 0;
   projections: ProjectionSet = { appliedTypes: [], appliedSequences: [], randomRolls: [] };
 
   reset(): void {
@@ -28,6 +30,16 @@ class FakeReplayProjectionManager implements ReplayProjectionManager {
     this.projections = { appliedTypes: [], appliedSequences: [], randomRolls: [] };
   }
 
+  restore(projections: ProjectionSet): void {
+    this.restoreCalls += 1;
+    if (this.failOnRestore) {
+      throw new Error("Snapshot restore failed.");
+    }
+
+    this.appliedEvents = [];
+    this.projections = structuredClone(projections);
+  }
+
   apply(event: CampaignEvent): void {
     if (event.sequence === this.failOnSequence) {
       throw new Error("Projection application failed.");
@@ -36,7 +48,7 @@ class FakeReplayProjectionManager implements ReplayProjectionManager {
     this.appliedEvents.push(event);
     (this.projections.appliedTypes as string[]).push(event.type);
     (this.projections.appliedSequences as number[]).push(event.sequence);
-    (this.projections.randomRolls as number[]).push((event.payload as { randomRoll?: number }).randomRoll);
+    (this.projections.randomRolls as Array<number | undefined>).push((event.payload as { randomRoll?: number }).randomRoll);
   }
 
   getCurrent(): ProjectionSet {
@@ -372,18 +384,34 @@ test("identical inputs produce identical replay results", async () => {
   assert.deepEqual(first, second);
 });
 
-test("snapshot input is deferred with diagnostics", async () => {
+test("snapshot replay restores projections before applying later events", async () => {
   const replay = new DefaultReplayEngine();
   const projectionManager = new FakeReplayProjectionManager();
 
   const result = await replay.replay({
     campaignPackage: sampleCampaign,
-    events: [],
+    events: [event(2)],
     projectionManager,
-    snapshot: { sequence: 1 }
+    snapshot: {
+      id: "snapshot-1",
+      campaignId: sampleCampaign.id,
+      aggregateId: sampleCampaign.id,
+      aggregateType: "campaign",
+      version: 1,
+      eventId: "evt-1",
+      schemaVersion: 1,
+      timestamp: "2026-07-06T00:00:01.000Z",
+      state: {
+        appliedTypes: ["test.fact"],
+        appliedSequences: [1],
+        randomRolls: [11]
+      }
+    }
   });
 
-  assert.equal(result.ok, false);
-  assert.equal(result.diagnostics[0].code, "replay.snapshot_deferred");
+  assert.equal(result.ok, true);
   assert.equal(projectionManager.resetCalls, 0);
+  assert.equal(projectionManager.restoreCalls, 1);
+  assert.equal(result.latestSequence, 2);
+  assert.deepEqual(result.projections?.appliedSequences, [1, 2]);
 });

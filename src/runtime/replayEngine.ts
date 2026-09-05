@@ -5,35 +5,49 @@ import type {
   ReplayResult,
   RuntimeDiagnostic
 } from "./types.ts";
+import { SNAPSHOT_SCHEMA_VERSION, validateSnapshot } from "./snapshotManager.ts";
 
 export class DefaultReplayEngine implements ReplayEngine {
   async replay(input: ReplayInput): Promise<ReplayResult> {
-    if (input.snapshot !== undefined) {
-      return failure({
-        code: "replay.snapshot_deferred",
-        message: "Snapshot replay is deferred for this implementation slice.",
-        severity: "error",
-        source: "ReplayEngine"
-      });
-    }
-
     const validationFailure = validateReplayInput(input);
     if (validationFailure) {
       return validationFailure;
     }
 
-    try {
-      await input.projectionManager.reset();
-    } catch (error) {
-      return failure({
-        code: "replay.projection_reset_failed",
-        message: error instanceof Error ? error.message : "Projection reset failed.",
-        severity: "error",
-        source: "ReplayEngine"
-      });
+    let latestSequence = input.snapshot?.version ?? 0;
+    if (input.snapshot) {
+      if (!input.projectionManager.restore) {
+        return failure({
+          code: "replay.snapshot_restore_unsupported",
+          message: "Projection manager does not support snapshot restore.",
+          severity: "error",
+          source: "ReplayEngine"
+        }, latestSequence);
+      }
+
+      try {
+        await input.projectionManager.restore(input.snapshot.state);
+      } catch (error) {
+        return failure({
+          code: "replay.snapshot_restore_failed",
+          message: error instanceof Error ? error.message : "Snapshot restore failed.",
+          severity: "error",
+          source: "ReplayEngine"
+        }, latestSequence);
+      }
+    } else {
+      try {
+        await input.projectionManager.reset();
+      } catch (error) {
+        return failure({
+          code: "replay.projection_reset_failed",
+          message: error instanceof Error ? error.message : "Projection reset failed.",
+          severity: "error",
+          source: "ReplayEngine"
+        });
+      }
     }
 
-    let latestSequence = 0;
     for (const event of input.events) {
       try {
         await input.projectionManager.apply(event);
@@ -76,8 +90,20 @@ export class DefaultReplayEngine implements ReplayEngine {
 }
 
 function validateReplayInput(input: ReplayInput): ReplayResult | null {
+  if (input.snapshot !== undefined) {
+    const diagnostics = validateSnapshot(input.snapshot, {
+      campaignId: input.campaignPackage.id,
+      aggregateId: input.snapshot?.aggregateId,
+      aggregateType: input.snapshot?.aggregateType,
+      schemaVersion: input.snapshotSchemaVersion ?? SNAPSHOT_SCHEMA_VERSION
+    });
+    if (diagnostics.length > 0) {
+      return failure(diagnostics[0]);
+    }
+  }
   const seenSequences = new Set<number>();
-  let previousSequence = 0;
+  const startingSequence = input.snapshot?.version ?? 0;
+  let previousSequence = startingSequence;
 
   for (let index = 0; index < input.events.length; index += 1) {
     const event = input.events[index] as CampaignEvent & { id?: unknown; sequence?: unknown };
@@ -134,7 +160,7 @@ function validateReplayInput(input: ReplayInput): ReplayResult | null {
       }, previousSequence, event as CampaignEvent);
     }
 
-    const expectedSequence = index + 1;
+    const expectedSequence = startingSequence + index + 1;
     if (event.sequence !== expectedSequence) {
       return failure({
         code: "replay.sequence_gap",

@@ -7,7 +7,7 @@ import type {
   RuntimeDiagnostic
 } from "./types.ts";
 
-type StoredProjection<TState = unknown> = {
+type StoredProjection<TState = any> = {
   definition: ProjectionDefinition<TState>;
   state: TState;
 };
@@ -60,6 +60,25 @@ export class DefaultProjectionManager implements ProjectionManager {
   reset(): void {
     for (const projection of this.projections.values()) {
       projection.state = createInitialState(projection.definition);
+    }
+    this.latestSequence = 0;
+  }
+
+  restore(projections: ProjectionSet): void {
+    const restored = new Map<string, unknown>();
+    for (const name of this.projections.keys()) {
+      if (!Object.hasOwn(projections, name)) {
+        throw new ProjectionManagerError("Snapshot is missing a registered projection.", [{
+          code: "projection.snapshot_incomplete",
+          message: `Snapshot is missing projection "${name}".`,
+          severity: "error",
+          source: "ProjectionManager"
+        }]);
+      }
+      restored.set(name, cloneValue(projections[name]));
+    }
+    for (const [name, projection] of this.projections) {
+      projection.state = restored.get(name);
     }
     this.latestSequence = 0;
   }
@@ -134,7 +153,7 @@ export class DefaultProjectionManager implements ProjectionManager {
   }
 }
 
-function validateDefinition(definition: ProjectionDefinition): void {
+function validateDefinition<TState>(definition: ProjectionDefinition<TState>): void {
   if (!definition.name) {
     throw new ProjectionManagerError(
       "Projection name is required.",

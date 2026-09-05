@@ -7,6 +7,8 @@ import {
   type AppendResult,
   type CampaignCommand,
   type CampaignEvent,
+  type EventCandidate,
+  type EventIntegrityResult,
   type EventStore,
   type ProjectionDefinition,
   type ProjectionManager,
@@ -21,9 +23,8 @@ class FakeEventStore implements EventStore {
   failAppend = false;
   nextSequence = 1;
 
-  async append(events: CampaignEvent[]): Promise<AppendResult> {
+  async append(events: EventCandidate[]): Promise<AppendResult> {
     this.appendCalls += 1;
-    this.appendedBatches.push(events);
 
     if (this.failAppend) {
       return {
@@ -42,12 +43,48 @@ class FakeEventStore implements EventStore {
 
     const appended = events.map((event) => ({
       ...event,
-      sequence: event.sequence ?? this.nextSequence++
-    }));
+      id: `evt-${this.nextSequence}`,
+      sequence: this.nextSequence++
+    })) as CampaignEvent[];
+
+    this.appendedBatches.push(appended);
 
     return {
       ok: true,
       events: appended,
+      diagnostics: []
+    };
+  }
+
+  async getById(): Promise<CampaignEvent | null> {
+    return null;
+  }
+
+  async getLast(): Promise<CampaignEvent[]> {
+    return [];
+  }
+
+  async getAfter(): Promise<CampaignEvent[]> {
+    return [];
+  }
+
+  async getBetween(): Promise<CampaignEvent[]> {
+    return [];
+  }
+
+  async getAll(): Promise<CampaignEvent[]> {
+    return [];
+  }
+
+  async getLatestSequence(): Promise<number> {
+    return this.nextSequence - 1;
+  }
+
+  async verifyIntegrity(): Promise<EventIntegrityResult> {
+    return {
+      ok: true,
+      latestSequence: this.nextSequence - 1,
+      eventCount: this.appendedBatches.flat().length,
       diagnostics: []
     };
   }
@@ -61,6 +98,10 @@ class FakeProjectionManager implements ProjectionManager {
   }
 
   reset(): void {
+    this.appliedEvents = [];
+  }
+
+  restore(): void {
     this.appliedEvents = [];
   }
 
@@ -180,10 +221,10 @@ function createPlugin(options: {
 
         return [
           {
-            id: "evt-1",
             campaignId: command.campaignId,
             type: "test.event_created",
             schemaVersion: 1,
+            metadataVersion: 1,
             actorId: command.actorId,
             payload: {
               result: "fact",
@@ -382,10 +423,10 @@ test("command processor depends on plugin registry instead of direct domain plug
   registry.registerCommand({ type: "test.succeed" });
   registry.registerRuleHandler("test.succeed", (command) => [
     {
-      id: "evt-direct-registry",
       campaignId: command.campaignId,
       type: "test.event_created",
       schemaVersion: 1,
+      metadataVersion: 1,
       payload: {}
     }
   ]);
@@ -404,5 +445,5 @@ test("command processor depends on plugin registry instead of direct domain plug
   const result = await processor.execute(createCommand());
 
   assert.equal(result.ok, true);
-  assert.equal(result.appendedEvents[0].id, "evt-direct-registry");
+  assert.equal(result.appendedEvents[0].type, "test.event_created");
 });

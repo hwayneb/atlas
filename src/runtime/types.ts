@@ -98,13 +98,13 @@ export type EventMetadataSchema = {
 
 export type ProjectionSet = Record<string, unknown>;
 
-export type ProjectionDefinition<TState = unknown> = {
+export type ProjectionDefinition<TState = any> = {
   name: string;
   initialState: TState | (() => TState);
   apply: ProjectionEventHandler<TState>;
 };
 
-export type ProjectionEventHandler<TState = unknown> = (
+export type ProjectionEventHandler<TState = any> = (
   event: CampaignEvent,
   state: Readonly<TState>
 ) => TState | void;
@@ -113,6 +113,49 @@ export type ProjectionApplyResult = {
   ok: boolean;
   latestSequence: number;
   diagnostics: RuntimeDiagnostic[];
+};
+
+export type Snapshot<TState = ProjectionSet> = {
+  id: string;
+  campaignId: string;
+  aggregateId: string;
+  aggregateType: string;
+  version: number;
+  eventId: string;
+  schemaVersion: number;
+  timestamp: string;
+  state: TState;
+  metadata?: Record<string, unknown>;
+};
+
+export type SnapshotCandidate<TState = ProjectionSet> = Omit<Snapshot<TState>, "id" | "timestamp"> & {
+  id?: string;
+  timestamp?: string;
+};
+
+export type SnapshotValidationContext = {
+  campaignId: string;
+  aggregateId: string;
+  aggregateType: string;
+  currentVersion?: number;
+  schemaVersion?: number;
+};
+
+export type SnapshotResult<TState = ProjectionSet> = {
+  ok: boolean;
+  snapshot?: Snapshot<TState>;
+  diagnostics: RuntimeDiagnostic[];
+};
+
+export type SnapshotLoadResult<TState = ProjectionSet> = SnapshotResult<TState> & {
+  found: boolean;
+};
+
+export type SnapshotPolicyInput = {
+  aggregateId: string;
+  aggregateType: string;
+  version: number;
+  lastSnapshotVersion?: number;
 };
 
 export type RuntimeServices = {
@@ -196,6 +239,7 @@ export interface EventStore {
 export interface ProjectionManager {
   register<TState>(definition: ProjectionDefinition<TState>): void;
   reset(): void | Promise<void>;
+  restore(projections: ProjectionSet): void | Promise<void>;
   apply(event: CampaignEvent): void | Promise<void>;
   rebuild(events: CampaignEvent[]): ProjectionSet | Promise<ProjectionSet>;
   get<TState = unknown>(name: string): Readonly<TState> | undefined;
@@ -230,12 +274,41 @@ export interface ReplayEngine {
   replay(input: ReplayInput): Promise<ReplayResult>;
 }
 
-export type ReplayInput = {
+export interface SnapshotStore {
+  save(snapshot: Snapshot): Promise<void>;
+  load(aggregateId: string): Promise<Snapshot | null>;
+  delete(aggregateId: string): Promise<void>;
+}
+
+export interface SnapshotPolicy {
+  shouldSnapshot(input: SnapshotPolicyInput): boolean;
+}
+
+export interface SnapshotManager {
+  save(snapshot: SnapshotCandidate): Promise<SnapshotResult>;
+  load(aggregateId: string, context: SnapshotValidationContext): Promise<SnapshotLoadResult>;
+  delete(aggregateId: string): Promise<void>;
+  shouldSnapshot(input: SnapshotPolicyInput): boolean;
+  replay(input: SnapshotReplayInput): Promise<ReplayResult>;
+}
+
+export type SnapshotReplayInput = {
+  aggregateId: string;
+  aggregateType: string;
   campaignPackage: CampaignPackage;
-  events: CampaignEvent[];
+  eventStore: EventStore;
+  replayEngine: ReplayEngine;
   projectionManager: ReplayProjectionManager;
   schemaRegistry?: EventSchemaRegistry;
-  snapshot?: unknown;
+};
+
+export type ReplayInput = {
+  campaignPackage: CampaignPackage;
+  events: readonly CampaignEvent[];
+  projectionManager: ReplayProjectionManager;
+  schemaRegistry?: EventSchemaRegistry;
+  snapshot?: Snapshot;
+  snapshotSchemaVersion?: number;
 };
 
 export type ReplayResult = {
@@ -249,6 +322,7 @@ export type ReplayResult = {
 
 export interface ReplayProjectionManager {
   reset(): void | Promise<void>;
+  restore?(projections: ProjectionSet): void | Promise<void>;
   apply(event: CampaignEvent): void | Promise<void>;
   getCurrent(): ProjectionSet;
 }
