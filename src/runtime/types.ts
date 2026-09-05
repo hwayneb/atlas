@@ -308,6 +308,7 @@ export type ReplayInput = {
   projectionManager: ReplayProjectionManager;
   schemaRegistry?: EventSchemaRegistry;
   snapshot?: Snapshot;
+  snapshotSchemaVersion?: number;
 };
 
 export type ReplayResult = {

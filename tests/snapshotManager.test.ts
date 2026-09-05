@@ -77,6 +77,21 @@ test("complete snapshot restore and later events match full replay", async () =>
   assert.equal(result.latestSequence, 2);
 });
 
+test("configured snapshot schema is preserved through manager replay", async () => {
+  const manager = new DefaultSnapshotManager({ schemaVersion: 2 });
+  assert.equal((await manager.save(snapshot({
+    schemaVersion: 2, state: { old: 1, new: 1 }
+  }))).ok, true);
+  const result = await manager.replay({
+    aggregateId: sampleCampaign.id, aggregateType: "campaign",
+    campaignPackage: sampleCampaign, eventStore: await events(),
+    replayEngine: new DefaultReplayEngine(), projectionManager: projections()
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.latestSequence, 2);
+  assert.deepEqual(result.projections, { old: 2, new: 2 });
+});
+
 for (const [name, value] of Object.entries({
   foreignCampaign: snapshot({ campaignId: "foreign" }),
   unsupportedSchema: snapshot({ schemaVersion: 999 }),

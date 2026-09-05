@@ -116,7 +116,8 @@ export class DefaultSnapshotManager implements SnapshotManager {
           events,
           projectionManager: input.projectionManager,
           schemaRegistry: input.schemaRegistry,
-          snapshot: loadResult.snapshot
+          snapshot: loadResult.snapshot,
+          snapshotSchemaVersion: this.schemaVersion
         });
         if (!result.diagnostics.some((diagnostic) =>
           diagnostic.code === "replay.snapshot_restore_failed"

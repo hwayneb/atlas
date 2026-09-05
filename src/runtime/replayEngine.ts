@@ -95,7 +95,7 @@ function validateReplayInput(input: ReplayInput): ReplayResult | null {
       campaignId: input.campaignPackage.id,
       aggregateId: input.snapshot?.aggregateId,
       aggregateType: input.snapshot?.aggregateType,
-      schemaVersion: SNAPSHOT_SCHEMA_VERSION
+      schemaVersion: input.snapshotSchemaVersion ?? SNAPSHOT_SCHEMA_VERSION
     });
     if (diagnostics.length > 0) {
       return failure(diagnostics[0]);
