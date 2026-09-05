@@ -4,7 +4,7 @@ This roadmap sequences Atlas from current foundation work to the long-term livin
 
 ## Phase 0: Foundation
 
-Status: Architecture v1.0 complete; engineering implementation begins with Campaign Director MVP.
+Status: Architecture v1.0 documentation complete; runtime foundations include Command Processor, Event Store, Replay Engine, Projection Manager, and an in-memory Snapshot Manager. Campaign Director MVP remains the next major implementation milestone. See [FEATURE-STATUS.md](FEATURE-STATUS.md) for remaining runtime work.
 
 Goal: Complete the core runtime and establish durable architecture.
 

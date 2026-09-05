@@ -10,16 +10,16 @@ Architecture v1.0 is finalized. The table below tracks implemented runtime slice
 | Campaign data types | Implemented | Character, NPC, location, encounter, quest, scene, and state types exist. |
 | Command Processor | Implemented | FEAT-003A complete and reviewed. |
 | Event Store | Implemented | FEAT-003B complete and reviewed. |
-| Replay Engine | Implemented | FEAT-003C first slice complete: full replay from provided event arrays, sequence validation, projection boundary application, and explicit snapshot deferral. |
-| Projection Manager | Implemented | FEAT-004 first slice complete: projection registration, reset, deterministic event application, lookup, rebuild, and failure isolation. |
-| Snapshot Manager | Draft | Contract exists; implementation pending. |
+| Replay Engine | Implemented | FEAT-003C foundation supports full replay from provided event arrays, sequence validation, projection boundary application, and snapshot state restoration followed by replay of later events. |
+| Projection Manager | Implemented | FEAT-004 foundation supports projection registration, reset, snapshot state restoration, deterministic event application, lookup, rebuild, and failure isolation. |
+| Snapshot Manager | Foundation implemented | Save/load/delete through an in-memory store, event-count policy, serialization helpers, metadata/schema checks, and event-anchor validation before snapshot-assisted replay. Missing or rejected snapshots fall back to full replay; durable storage and Save Manager integration remain. |
 | Save Manager | Early MVP | Current localStorage save manager predates runtime event sourcing. |
 
 ## Architecture v1.0 Engine Status
 
 | Engine | Status | Notes |
 | --- | --- | --- |
-| Runtime Engine | In progress | Command Processor, Event Store, Replay Engine, and Projection Manager first slices are implemented. Snapshot Manager, Save Manager reconciliation, asset registry, plugin registry hardening, and migration support remain. |
+| Runtime Engine | In progress | Command Processor, Event Store, Replay Engine, Projection Manager, and Snapshot Manager foundations are implemented. Durable snapshot storage, Save Manager reconciliation, asset registry, plugin registry hardening, and migration support remain. |
 | Campaign Director | Next | MVP is the next major milestone. It should own orchestration, scene lifecycle, player intent routing, NPC activation, AI capability requests, campaign memory integration, and event generation without owning rules. |
 | Rules Engine | Foundation only | Early dice and rule abstractions exist. Full plugin-based rules framework, character systems, combat, inventory, conditions, and rules validation remain. |
 | World Engine | Not started | Persistent world state, NPC memory, factions, reputation, time, travel, economy, weather, and living-world simulation remain future work. |

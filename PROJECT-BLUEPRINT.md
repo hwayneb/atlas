@@ -44,6 +44,7 @@ Atlas currently includes:
 - Append-only Event Store runtime slice
 - Deterministic Replay Engine slice
 - Projection Manager slice
+- Snapshot Manager foundation with in-memory storage and snapshot-assisted replay
 - Design reviews and implementation reviews for the runtime foundation
 - Architecture v1.0 documentation and ADRs
 
