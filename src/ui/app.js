@@ -1,6 +1,10 @@
-const app = document.querySelector("#app");
-const storageKey = "atlas.game-state";
-const campaign = {
+const DEFAULT_DICE_NOTATION = "d20";
+const DEFAULT_DICE_RESULT = "Ready.";
+const NEW_RUN_CONFIRMATION =
+  "Start a new run? This replaces your current campaign progress.";
+const STORAGE_KEY = "atlas.game-state";
+
+const sampleCampaign = {
   id: "ember-road",
   title: "The Ember Road",
   version: "0.1.0",
@@ -118,25 +122,55 @@ const campaign = {
   ]
 };
 
-let state = loadState() ?? createInitialGameState(campaign);
+/**
+ * Mount the served Atlas campaign shell.
+ * @param {{
+ *   root: ParentNode & { innerHTML: string, querySelector: Function, querySelectorAll: Function },
+ *   storage?: Pick<Storage, "getItem" | "setItem" | "removeItem">,
+ *   confirm?: (message: string) => boolean,
+ *   random?: () => number,
+ *   registerServiceWorker?: boolean
+ * }} options
+ */
+export function startAtlasApp(options) {
+  const app = options.root;
+  const storage = options.storage ?? globalThis.localStorage;
+  const confirmFn = options.confirm ?? ((message) => globalThis.confirm(message));
+  const random = options.random ?? Math.random;
+  const campaign = sampleCampaign;
+  let state = loadState(storage) ?? createInitialGameState(campaign);
+  let diceNotation = DEFAULT_DICE_NOTATION;
+  let diceResultText = DEFAULT_DICE_RESULT;
 
-if (state.campaignId !== campaign.id) {
-  state = createInitialGameState(campaign);
-}
+  if (state.campaignId !== campaign.id) {
+    state = createInitialGameState(campaign);
+  }
 
-saveState(state);
+  saveState(storage, state);
 
-if ("serviceWorker" in navigator && location.protocol !== "file:") {
-  navigator.serviceWorker.register("/public/sw.js");
-}
+  if (
+    options.registerServiceWorker !== false &&
+    typeof navigator !== "undefined" &&
+    "serviceWorker" in navigator &&
+    typeof location !== "undefined" &&
+    location.protocol !== "file:"
+  ) {
+    navigator.serviceWorker.register("/public/sw.js");
+  }
 
-render();
+  render();
 
-function render(lastResult = "") {
-  const scene = getCurrentScene(campaign, state);
-  const character = getActiveCharacter(campaign, state);
+  return {
+    getState: () => state,
+    getDiceNotation: () => diceNotation,
+    getDiceResultText: () => diceResultText
+  };
 
-  app.innerHTML = `
+  function render(lastResult = "") {
+    const scene = getCurrentScene(campaign, state);
+    const character = getActiveCharacter(campaign, state);
+
+    app.innerHTML = `
     <section class="topline">
       <div>
         <p class="kicker">Offline Campaign</p>
@@ -172,10 +206,10 @@ function render(lastResult = "") {
         <section class="dice-box">
           <p class="kicker">Dice Roller</p>
           <div class="dice-controls">
-            <input id="dice-notation" value="d20" aria-label="Dice notation" />
-            <button data-command="roll">Roll</button>
+            <input id="dice-notation" value="${escapeHtml(diceNotation)}" aria-label="Dice notation" />
+            <button type="button" data-command="roll">Roll</button>
           </div>
-          <p id="dice-result" class="dice-result">Ready.</p>
+          <p id="dice-result" class="dice-result">${escapeHtml(diceResultText)}</p>
         </section>
       </aside>
     </section>
@@ -202,53 +236,83 @@ function render(lastResult = "") {
     </section>
   `;
 
-  bindEvents();
-}
+    bindEvents(lastResult);
+  }
 
-function bindEvents() {
-  for (const button of app.querySelectorAll("[data-action]")) {
-    button.addEventListener("click", () => {
-      const actionId = button.getAttribute("data-action");
-      const scene = getCurrentScene(campaign, state);
-      const action = scene.actions.find((candidate) => candidate.id === actionId);
-      state = applyAction(campaign, state, actionId);
-      saveState(state);
-      render(action?.resultText ?? "");
+  function bindEvents(lastResult) {
+    for (const button of app.querySelectorAll("[data-action]")) {
+      button.addEventListener("click", () => {
+        const actionId = button.getAttribute("data-action");
+        const scene = getCurrentScene(campaign, state);
+        const action = scene.actions.find((candidate) => candidate.id === actionId);
+        state = applyAction(campaign, state, actionId);
+        saveState(storage, state);
+        render(action?.resultText ?? "");
+      });
+    }
+
+    const rollButton = app.querySelector("[data-command='roll']");
+    const diceInput = app.querySelector("#dice-notation");
+
+    rollButton?.addEventListener("click", () => {
+      handleRoll(lastResult);
+    });
+
+    diceInput?.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") {
+        return;
+      }
+      event.preventDefault();
+      handleRoll(lastResult);
+    });
+
+    app.querySelector("[data-command='reset']")?.addEventListener("click", () => {
+      if (!confirmFn(NEW_RUN_CONFIRMATION)) {
+        return;
+      }
+      state = createInitialGameState(campaign);
+      diceNotation = DEFAULT_DICE_NOTATION;
+      diceResultText = DEFAULT_DICE_RESULT;
+      saveState(storage, state);
+      render();
+    });
+
+    app.querySelector("#journal-form")?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const data = new FormData(form);
+      const text = String(data.get("entry") ?? "").trim();
+      if (!text) {
+        return;
+      }
+      state = appendJournal(state, text);
+      saveState(storage, state);
+      render(lastResult);
     });
   }
 
-  app.querySelector("[data-command='roll']").addEventListener("click", () => {
+  function handleRoll(lastResult) {
     const input = app.querySelector("#dice-notation");
-    const output = app.querySelector("#dice-result");
-    try {
-      const roll = rollDice(input.value);
-      output.textContent = `${roll.notation}: ${roll.rolls.join(" + ")}${roll.modifier ? ` ${roll.modifier > 0 ? "+" : "-"} ${Math.abs(roll.modifier)}` : ""} = ${roll.total}`;
-      state = appendJournal(state, `Rolled ${output.textContent}`);
-      saveState(state);
-      render();
-    } catch (error) {
-      output.textContent = error instanceof Error ? error.message : "Invalid roll.";
-    }
-  });
-
-  app.querySelector("[data-command='reset']").addEventListener("click", () => {
-    state = createInitialGameState(campaign);
-    saveState(state);
-    render();
-  });
-
-  app.querySelector("#journal-form").addEventListener("submit", (event) => {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const data = new FormData(form);
-    const text = String(data.get("entry") ?? "").trim();
-    if (!text) {
+    if (!input) {
       return;
     }
-    state = appendJournal(state, text);
-    saveState(state);
-    render();
-  });
+
+    diceNotation = input.value;
+
+    try {
+      const roll = rollDice(input.value, random);
+      diceResultText = formatDiceResult(roll);
+      state = appendJournal(state, `Rolled ${diceResultText}`);
+      saveState(storage, state);
+      render(lastResult);
+    } catch (error) {
+      diceResultText = error instanceof Error ? error.message : "Invalid roll.";
+      const output = app.querySelector("#dice-result");
+      if (output) {
+        output.textContent = diceResultText;
+      }
+    }
+  }
 }
 
 function createInitialGameState(campaignPackage) {
@@ -305,7 +369,7 @@ function applyAction(campaignPackage, gameState, actionId) {
   return appendJournal(nextState, action.journalEntry ? `${action.label}: ${action.journalEntry}` : action.resultText);
 }
 
-function rollDice(notation) {
+function rollDice(notation, random = Math.random) {
   const normalized = notation.replace(/\s+/g, "");
   const match = /^(\d*)d(\d+)([+-]\d+)?$/i.exec(normalized);
   if (!match) {
@@ -320,7 +384,7 @@ function rollDice(notation) {
     throw new Error("Dice notation is outside supported bounds.");
   }
 
-  const rolls = Array.from({ length: count }, () => Math.floor(Math.random() * sides) + 1);
+  const rolls = Array.from({ length: count }, () => Math.floor(random() * sides) + 1);
   return {
     notation: normalized,
     rolls,
@@ -329,20 +393,29 @@ function rollDice(notation) {
   };
 }
 
+function formatDiceResult(roll) {
+  const modifierText = roll.modifier
+    ? ` ${roll.modifier > 0 ? "+" : "-"} ${Math.abs(roll.modifier)}`
+    : "";
+  return `${roll.notation}: ${roll.rolls.join(" + ")}${modifierText} = ${roll.total}`;
+}
+
 function createJournalEntry(text) {
   return {
-    id: crypto?.randomUUID ? crypto.randomUUID() : `entry-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    id: globalThis.crypto?.randomUUID
+      ? globalThis.crypto.randomUUID()
+      : `entry-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     timestamp: new Date().toISOString(),
     text
   };
 }
 
-function saveState(gameState) {
-  localStorage.setItem(storageKey, JSON.stringify(gameState));
+function saveState(storage, gameState) {
+  storage.setItem(STORAGE_KEY, JSON.stringify(gameState));
 }
 
-function loadState() {
-  const raw = localStorage.getItem(storageKey);
+function loadState(storage) {
+  const raw = storage.getItem(STORAGE_KEY);
   return raw ? JSON.parse(raw) : null;
 }
 
@@ -353,4 +426,9 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+const bootRoot = typeof document !== "undefined" ? document.querySelector("#app") : null;
+if (bootRoot) {
+  startAtlasApp({ root: bootRoot });
 }

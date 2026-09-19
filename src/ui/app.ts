@@ -9,14 +9,21 @@ import {
 } from "../engine/gameEngine.ts";
 import { SaveManager } from "../storage/saveManager.ts";
 
-const app = document.querySelector<HTMLElement>("#app");
+const DEFAULT_DICE_NOTATION = "d20";
+const DEFAULT_DICE_RESULT = "Ready.";
+const NEW_RUN_CONFIRMATION =
+  "Start a new run? This replaces your current campaign progress.";
+
+const appRoot = document.querySelector<HTMLElement>("#app");
+if (!appRoot) {
+  throw new Error("App root was not found.");
+}
+const app: HTMLElement = appRoot;
 const saveManager = new SaveManager();
 const campaign = sampleCampaign;
 let state = saveManager.load() ?? createInitialGameState(campaign);
-
-if (!app) {
-  throw new Error("App root was not found.");
-}
+let diceNotation = DEFAULT_DICE_NOTATION;
+let diceResultText = DEFAULT_DICE_RESULT;
 
 if (state.campaignId !== campaign.id) {
   state = createInitialGameState(campaign);
@@ -70,10 +77,10 @@ function render(lastResult = ""): void {
         <section class="dice-box">
           <p class="kicker">Dice Roller</p>
           <div class="dice-controls">
-            <input id="dice-notation" value="d20" aria-label="Dice notation" />
-            <button data-command="roll">Roll</button>
+            <input id="dice-notation" value="${escapeHtml(diceNotation)}" aria-label="Dice notation" />
+            <button type="button" data-command="roll">Roll</button>
           </div>
-          <p id="dice-result" class="dice-result">Ready.</p>
+          <p id="dice-result" class="dice-result">${escapeHtml(diceResultText)}</p>
         </section>
       </aside>
     </section>
@@ -100,11 +107,11 @@ function render(lastResult = ""): void {
     </section>
   `;
 
-  bindEvents();
+  bindEvents(lastResult);
 }
 
-function bindEvents(): void {
-  for (const button of app.querySelectorAll<HTMLButtonElement>("[data-action]")) {
+function bindEvents(lastResult: string): void {
+  for (const button of Array.from(app.querySelectorAll<HTMLButtonElement>("[data-action]"))) {
     button.addEventListener("click", () => {
       const actionId = button.getAttribute("data-action");
       if (!actionId) {
@@ -118,32 +125,35 @@ function bindEvents(): void {
     });
   }
 
-  app.querySelector<HTMLButtonElement>("[data-command='roll']")?.addEventListener("click", () => {
-    const input = app.querySelector<HTMLInputElement>("#dice-notation");
-    const output = app.querySelector<HTMLElement>("#dice-result");
-    if (!input || !output) {
+  const rollButton = app.querySelector<HTMLButtonElement>("[data-command='roll']");
+  const diceInput = app.querySelector<HTMLInputElement>("#dice-notation");
+
+  rollButton?.addEventListener("click", () => {
+    handleRoll(lastResult);
+  });
+
+  diceInput?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") {
       return;
     }
-    try {
-      const roll = rollDice(input.value);
-      output.textContent = `${roll.notation}: ${roll.rolls.join(" + ")}${roll.modifier ? ` ${roll.modifier > 0 ? "+" : "-"} ${Math.abs(roll.modifier)}` : ""} = ${roll.total}`;
-      state = appendJournal(state, `Rolled ${output.textContent}`);
-      saveManager.save(state);
-      render();
-    } catch (error) {
-      output.textContent = error instanceof Error ? error.message : "Invalid roll.";
-    }
+    event.preventDefault();
+    handleRoll(lastResult);
   });
 
   app.querySelector<HTMLButtonElement>("[data-command='reset']")?.addEventListener("click", () => {
+    if (!window.confirm(NEW_RUN_CONFIRMATION)) {
+      return;
+    }
     state = createInitialGameState(campaign);
+    diceNotation = DEFAULT_DICE_NOTATION;
+    diceResultText = DEFAULT_DICE_RESULT;
     saveManager.save(state);
     render();
   });
 
   app.querySelector<HTMLFormElement>("#journal-form")?.addEventListener("submit", (event) => {
     event.preventDefault();
-    const form = event.currentTarget;
+    const form = event.currentTarget as HTMLFormElement;
     const data = new FormData(form);
     const text = String(data.get("entry") ?? "").trim();
     if (!text) {
@@ -151,8 +161,43 @@ function bindEvents(): void {
     }
     state = appendJournal(state, text);
     saveManager.save(state);
-    render();
+    render(lastResult);
   });
+}
+
+function handleRoll(lastResult: string): void {
+  const input = app.querySelector<HTMLInputElement>("#dice-notation");
+  if (!input) {
+    return;
+  }
+
+  diceNotation = input.value;
+
+  try {
+    const roll = rollDice(input.value);
+    diceResultText = formatDiceResult(roll);
+    state = appendJournal(state, `Rolled ${diceResultText}`);
+    saveManager.save(state);
+    render(lastResult);
+  } catch (error) {
+    diceResultText = error instanceof Error ? error.message : "Invalid roll.";
+    const output = app.querySelector<HTMLElement>("#dice-result");
+    if (output) {
+      output.textContent = diceResultText;
+    }
+  }
+}
+
+function formatDiceResult(roll: {
+  notation: string;
+  rolls: number[];
+  modifier: number;
+  total: number;
+}): string {
+  const modifierText = roll.modifier
+    ? ` ${roll.modifier > 0 ? "+" : "-"} ${Math.abs(roll.modifier)}`
+    : "";
+  return `${roll.notation}: ${roll.rolls.join(" + ")}${modifierText} = ${roll.total}`;
 }
 
 function escapeHtml(value: unknown): string {
