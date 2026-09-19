@@ -199,37 +199,68 @@ async function connectBrowser(browserBinary: string): Promise<BrowserSession> {
   }
 }
 
-async function waitForJson<T>(url: string, timeoutMs: number, onTick?: () => void): Promise<T> {
+async function waitForJson<T>(
+  url: string,
+  timeoutMs: number,
+  onTick?: () => void,
+  fetchImpl: typeof globalThis.fetch = globalThis.fetch
+): Promise<T> {
   const deadline = Date.now() + timeoutMs;
   let lastError: Error | null = null;
+
   while (Date.now() < deadline) {
     onTick?.();
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) {
+      break;
+    }
+
+    const controller = new AbortController();
+    const abortTimer = setTimeout(() => controller.abort(), remainingMs);
     try {
-      const response = await fetch(url);
+      const response = await fetchImpl(url, { signal: controller.signal });
       if (!response.ok) {
         throw new Error(`HTTP ${response.status} for ${url}`);
       }
+      // Body parse is covered by the same AbortSignal; abort cancels an in-flight read.
       return (await response.json()) as T;
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
-      await delay(100);
+      const sleepMs = Math.min(100, Math.max(0, deadline - Date.now()));
+      if (sleepMs > 0) {
+        await delay(sleepMs);
+      }
+    } finally {
+      clearTimeout(abortTimer);
     }
   }
+
   throw lastError ?? new Error(`Timed out waiting for ${url} after ${timeoutMs}ms.`);
 }
 
 async function openCdp(url: string): Promise<CdpClient> {
   const socket = new WebSocket(url);
-  await withTimeout(
-    new Promise<void>((resolve, reject) => {
-      socket.addEventListener("open", () => resolve(), { once: true });
-      socket.addEventListener("error", () => reject(new Error(`Failed to open CDP socket ${url}`)), {
-        once: true
-      });
-    }),
-    CDP_OPEN_MS,
-    `CDP websocket open timed out after ${CDP_OPEN_MS}ms`
-  );
+  try {
+    await withTimeout(
+      new Promise<void>((resolve, reject) => {
+        socket.addEventListener("open", () => resolve(), { once: true });
+        socket.addEventListener(
+          "error",
+          () => reject(new Error(`Failed to open CDP socket ${url}`)),
+          { once: true }
+        );
+      }),
+      CDP_OPEN_MS,
+      `CDP websocket open timed out after ${CDP_OPEN_MS}ms`
+    );
+  } catch (error) {
+    try {
+      socket.close();
+    } catch {
+      // ignore close races during failed setup
+    }
+    throw error;
+  }
 
   let nextId = 1;
   const pending = new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void }>();
@@ -330,6 +361,39 @@ async function waitForApp(client: CdpClient): Promise<void> {
   }
   throw new Error(`Atlas UI did not become ready within ${APP_READY_MS}ms.`);
 }
+
+test("waitForJson aborts a never-settling fetch within the deadline", async () => {
+  // Settles only when AbortSignal fires — same failure mode as a stalled DevTools
+  // endpoint if fetch/json are not covered by the timeout.
+  const hangingFetch: typeof fetch = (_url, init) =>
+    new Promise((_resolve, reject) => {
+      const signal = init?.signal;
+      if (!signal) {
+        return;
+      }
+      if (signal.aborted) {
+        reject(new DOMException("The operation was aborted.", "AbortError"));
+        return;
+      }
+      signal.addEventListener(
+        "abort",
+        () => {
+          reject(new DOMException("The operation was aborted.", "AbortError"));
+        },
+        { once: true }
+      );
+    });
+
+  const started = Date.now();
+  await assert.rejects(
+    () => waitForJson("http://127.0.0.1:9/json/version", 25, undefined, hangingFetch)
+  );
+  const elapsed = Date.now() - started;
+  assert.ok(
+    elapsed < 150,
+    `waitForJson must honor timeoutMs across fetch+parse; elapsed ${elapsed}ms for timeoutMs=25`
+  );
+});
 
 test("static: served app.js wires dice persistence, Enter roll, and New Run confirm", () => {
   const source = readFileSync(SERVED_APP_PATH, "utf8");
